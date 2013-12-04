@@ -73,7 +73,6 @@ public class Step1Test {
         Step1 step1 = new Step1(model, interpreter, cfg, null);
         model.getVarRef("x1").setBindValue(1000.0);
         model.getVarRef("x2").setBindValue(100.0);
-        Whitebox.invokeMethod(step1, "generateRandomInitialX", new Object[] {});
         Double S = Whitebox.<Double> invokeMethod(createInnerClass(step1, "InitailVectorComputation"), "compute",
                 new Object[] {});
         assertNotNull(S);
