@@ -132,9 +132,6 @@ public class Step1 extends BaseStep {
 
     private void generateRandomInitialX() {
         for (SymbolDeclaration sd : vars) {
-            if (null != sd.getBindValue()) {
-                continue;
-            }
             Expression lbExpr = sd.getLowerBound();
             Expression ubExpr = sd.getUpperBound();
             Double lb = interpreter.evaluateExpression(lbExpr);
