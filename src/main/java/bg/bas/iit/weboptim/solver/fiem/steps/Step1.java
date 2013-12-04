@@ -245,6 +245,7 @@ public class Step1 extends BaseStep {
         logger.debug(String.format("Will generate initial population of size %d (base: %d, ext: %d)", populationSize,
                 cfg.popSize, extPopSize));
         initialPopulation = new ArrayList<double[]>(populationSize);
+        long unfeasibleInstances = 0;
         for (int i = 0; i < populationSize; ++i) {
             double[] point = new double[vars.size()];
             initialPopulation.add(point);
@@ -275,9 +276,15 @@ public class Step1 extends BaseStep {
                     }
                 }
                 if (point[j] == val) {
-                    logger.warn("New random value component does not satisfy constraints. Leaving as is.");
+                    unfeasibleInstances++;
+                    if (unfeasibleInstances == Long.MAX_VALUE) {
+                        logger.debug(unfeasibleInstances + " unfeasible candidates generated for instance " + (i + 1)
+                                + "and counting ...");
+                        unfeasibleInstances = 0;
+                    }
                 }
             }
+            logger.debug(unfeasibleInstances + " unfeasible candidates generated for instance " + (i+1));
         }
     }
 
@@ -300,6 +307,13 @@ public class Step1 extends BaseStep {
             logger.debug("S minimized to " + S);
             if (S > 0) {
                 logger.error("S > 0 - can not find feasible initial point");
+            }
+            if (logger.isDebugEnabled()) {
+                logger.debug("Constraints' right and left parts after minimization of constraints violations");
+                for (ConstraintDeclaration cd : model.getConstraints()) {
+                    logger.debug(cd.getName() + ": " + interpreter.evaluateExpression(cd.getaExpr()) + " "
+                            + cd.getRelop() + " " + interpreter.evaluateExpression(cd.getbExpr()));
+                }
             }
             break;
         case 3:

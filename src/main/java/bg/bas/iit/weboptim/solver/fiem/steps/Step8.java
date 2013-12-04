@@ -34,6 +34,11 @@ public class Step8 extends BaseStep {
             pop.add(new ObjectivesValuesForPoint(p, Util.bindAndEvaluateGoals(p, model, interpreter)));
         }
         Collections.sort(pop, new ObjectivesValuesComparator(Util.getGoalVector(refPoint)));
-        return input.getYesNo(false, pop + "\nIs the desired (best) satisfactory solution among the presented ones? If yes then STOP the calculations, else continue the search procedure.");
+        StringBuilder sb = new StringBuilder();
+        for (ObjectivesValuesForPoint o : pop) {
+            sb.append(o).append("\n");
+        }
+        sb.append("Is the desired (best) satisfactory solution among the presented ones? If yes then STOP the calculations, else continue the search procedure.");
+        return input.getYesNo(false, sb.toString());
     }
 }
