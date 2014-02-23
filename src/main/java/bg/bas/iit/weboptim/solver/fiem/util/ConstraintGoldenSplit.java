@@ -25,7 +25,7 @@ public class ConstraintGoldenSplit {
                 right = middle;
             }
         } while (Util.euclidDistance(left, right) > Math.sqrt(line.dim()));
-        return Util.round(left);
+        return Util.round(left, model, interpreter);
     }
 
     public double[] spit(Line line, int constraintIdx) {
@@ -40,7 +40,7 @@ public class ConstraintGoldenSplit {
                 right = middle;
             }
         } while (Util.euclidDistance(left, right) > Math.sqrt(line.dim()));
-        return Util.round(left);
+        return Util.round(left, model, interpreter);
     }
 
     private double[] goldenSplit(double[] left, double[] right) {

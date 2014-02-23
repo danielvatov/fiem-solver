@@ -118,7 +118,7 @@ public class FiemSolver extends Solver {
             Step5 step5 = new Step5(model, interpreter, cfg);
             point = step5.execute(point, chebyshevCenter);
 
-            Step6 step6 = new Step6(cfg);
+            Step6 step6 = new Step6(model, interpreter, cfg);
             population = step6.execute(point.getPoint(), population);
 
             Step7 step7 = new Step7(model, interpreter, cfg);

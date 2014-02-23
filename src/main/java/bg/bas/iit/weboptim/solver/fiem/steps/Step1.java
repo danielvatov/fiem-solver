@@ -113,17 +113,13 @@ public class Step1 extends BaseStep {
         this.input = input;
         this.cfg = cfg;
         logger = getLogger(Step1.class, cfg.threadedLogging);
-        ArrayList<SymbolDeclaration> symbols = model.getSymbolDeclarations();
-        for (SymbolDeclaration sd : symbols) {
-            if (sd.getType() == SymbolType.VAR) {
-                if (!isBounded(sd)) {
-                    throw new FiemException("variable " + sd.getName() + " is unbounded");
-                }
-                vars.add(sd);
+        vars = model.getVarRefs();
+        for (SymbolDeclaration sd : vars) {
+            if (!isBounded(sd)) {
+                throw new FiemException("variable " + sd.getName() + " is unbounded");
             }
         }
         chebyshevCenter = new double[vars.size()];
-
     }
 
     private boolean isBounded(SymbolDeclaration sd) {

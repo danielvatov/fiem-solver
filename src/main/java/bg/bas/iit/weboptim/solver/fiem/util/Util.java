@@ -2,8 +2,11 @@ package bg.bas.iit.weboptim.solver.fiem.util;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import net.vatov.ampl.model.ConstraintDeclaration;
+import net.vatov.ampl.model.Expression;
 import net.vatov.ampl.model.ObjectiveDeclaration;
 import net.vatov.ampl.model.OptimModel;
 import net.vatov.ampl.model.SymbolDeclaration;
@@ -11,6 +14,8 @@ import net.vatov.ampl.solver.OptimModelInterpreter;
 
 import org.apache.commons.math3.util.Precision;
 import org.apache.log4j.Logger;
+
+import bg.bas.iit.weboptim.solver.fiem.FiemException;
 
 
 public class Util {
@@ -27,16 +32,6 @@ public class Util {
         int constraintsNum = model.getConstraints().size();
         for (int i = 0; i < constraintsNum; ++i) {
             if (!interpreter.evaluateConstraint(i)) {
-                return false;
-            }
-        }
-        for (SymbolDeclaration sd : model.getVarRefs()) {
-            Double lowerBound = interpreter.evaluateExpression(sd.getLowerBound());
-            if (sd.getBindValue() < lowerBound) {
-                return false;
-            }
-            Double upperBound = interpreter.evaluateExpression(sd.getUpperBound());
-            if (sd.getBindValue() > upperBound) {
                 return false;
             }
         }
@@ -101,14 +96,36 @@ public class Util {
         return ret;
     }
     
-    public static double[] round(final double[] point) {
-        double[] ret = new double[point.length];
+    public static double[] round(final double[] point, OptimModel model, OptimModelInterpreter interpreter) {
+        double[] ret = Arrays.copyOf(point, point.length);
+        if (!constraintsSatisfied(model, interpreter, point)) {
+            throw new FiemException("Rounding unfeasible value");
+        }
         for (int i = 0; i < point.length; ++i) {
             ret[i] = Precision.round(point[i], 0, BigDecimal.ROUND_DOWN);
+            if (!constraintsSatisfied(model, interpreter, ret)) {
+                ret[i] = Precision.round(point[i], 0, BigDecimal.ROUND_UP);
+                if (!constraintsSatisfied(model, interpreter, ret)) {
+                    throw new FiemException("Rounding unfeasible value");
+                }
+            }
         }
         return ret;
     }
-    
+
+    public static List<ConstraintDeclaration> getUnsatisfiedConstraints(OptimModel model,
+            OptimModelInterpreter interpreter, double[] point) {
+        bindVars(model, point);
+        List<ConstraintDeclaration> ret = new ArrayList<ConstraintDeclaration>();
+        int constraintsNum = model.getConstraints().size();
+        for (int i = 0; i < constraintsNum; ++i) {
+            if (!interpreter.evaluateConstraint(i)) {
+                ret.add(model.getConstraints().get(i));
+            }
+        }
+        return ret;
+    }
+
     public static double[] computeWeightCenter(List<double[]> population) {
         int length = population.get(0).length;
         double[] ret = new double[length];
