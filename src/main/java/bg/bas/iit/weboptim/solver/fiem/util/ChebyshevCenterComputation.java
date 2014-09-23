@@ -6,6 +6,7 @@ import java.util.List;
 
 import net.vatov.ampl.model.OptimModel;
 import net.vatov.ampl.solver.OptimModelInterpreter;
+import org.apache.log4j.Logger;
 
 public class ChebyshevCenterComputation {
 
@@ -13,10 +14,10 @@ public class ChebyshevCenterComputation {
     private final OptimModel model;
     private final ConstraintGoldenSplit goldenSplit;
     
-    public ChebyshevCenterComputation(OptimModel model, OptimModelInterpreter interpreter) {
+    public ChebyshevCenterComputation(OptimModel model, OptimModelInterpreter interpreter, Logger logger) {
         this.model = model;
         this.interpreter = interpreter;
-        goldenSplit = new ConstraintGoldenSplit(model, interpreter);
+        goldenSplit = new ConstraintGoldenSplit(model, interpreter, logger);
     }
 
     public double[] compute() {

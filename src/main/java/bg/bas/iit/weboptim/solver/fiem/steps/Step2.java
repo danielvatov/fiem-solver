@@ -21,7 +21,7 @@ import bg.bas.iit.weboptim.solver.fiem.util.Util;
 public class Step2 extends BaseStep {
 
     private Logger logger;
-    
+
     private class DominationsComparator implements Comparator<PointDominations> {
 
         public int compare(PointDominations p1, PointDominations p2) {
@@ -63,6 +63,7 @@ public class Step2 extends BaseStep {
     public List<double[]> execute(List<double[]> ptot) {
         logger.debug("executing step 2");
         Util.dumpPopulation(logger, ptot, "starting population");
+        Util.checkConstraints(ptot, model, interpreter, logger);
         findUndominated(ptot);
         Util.dumpPopulation(logger, p, "internal population");
         Util.dumpPopulation(logger, pe, "external population");
@@ -161,11 +162,11 @@ public class Step2 extends BaseStep {
             right = Util.translate(left, a, t);
             a *= 10;
         } while (Util.constraintsSatisfied(model, interpreter, right));
-        copyPointTo(point, new ConstraintGoldenSplit(model, interpreter).spit(new Line(left, right)));
+        copyPointTo(point, new ConstraintGoldenSplit(model, interpreter, logger).spit(new Line(left, right)));
     }
 
     private void copyPointTo(double[] target, double[] source) {
-        for (int i=0; i< source.length; ++i) {
+        for (int i = 0; i < source.length; ++i) {
             target[i] = source[i];
         }
     }

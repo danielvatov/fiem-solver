@@ -26,7 +26,7 @@ public class Step7 extends BaseStep {
     public List<double[]> execute(List<double[]> population, double[] chebyshevCenter) {
         logger.debug("executing step 7");
         List<double[]> ret = new ArrayList<double[]>(population.size());
-        ConstraintGoldenSplit goldenSplit = new ConstraintGoldenSplit(model, interpreter);
+        ConstraintGoldenSplit goldenSplit = new ConstraintGoldenSplit(model, interpreter, logger);
         for (double[] p : population) {
             if (Util.constraintsSatisfied(model, interpreter, p)) {
                 ret.add(p);

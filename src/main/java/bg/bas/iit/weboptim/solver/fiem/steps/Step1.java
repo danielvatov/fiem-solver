@@ -1,9 +1,6 @@
 package bg.bas.iit.weboptim.solver.fiem.steps;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import net.vatov.ampl.model.ConstraintDeclaration;
 import net.vatov.ampl.model.ConstraintDeclaration.RelopType;
@@ -148,18 +145,16 @@ public class Step1 extends BaseStep {
     }
 
     private void gotoChebyshevCenter() {
+        Map<String, double[]> constraintsCoefficients = Util.getConstraintsCoefficients(model, interpreter);
+        double[] p = Util.computeChebyshevCenter(constraintsCoefficients);
+
         int i = 0;
         for (SymbolDeclaration sd : vars) {
-            Expression lbExpr = sd.getLowerBound();
-            Expression ubExpr = sd.getUpperBound();
-            Double lb = interpreter.evaluateExpression(lbExpr);
-            Double ub = interpreter.evaluateExpression(ubExpr);
-            double mid = 0.5 * (ub - lb) + lb;
             if (sd.isInteger()) {
-                mid = Math.round(mid);
+                sd.setBindValue(Double.valueOf(Math.round(p[i++])));
+            } else {
+                sd.setBindValue(p[i++]);
             }
-            sd.setBindValue(Double.valueOf(mid));
-            chebyshevCenter[i++] = sd.getBindValue();
         }
     }
 
@@ -181,7 +176,7 @@ public class Step1 extends BaseStep {
                 }
             }
         }
-        if (!evaluateConstraints()) {
+        if (!Util.constraintsSatisfied(model, interpreter, null)) {
             logger.error("S is " + S);
             logger.error("variables vector is: " + vars);
             logger.error("Broken constraints are: ");
@@ -224,7 +219,7 @@ public class Step1 extends BaseStep {
     }
 
     private double hasImprovementOfGoalWithRestore(SymbolDeclaration sd, double goal, double oldValue, double newValue,
-            ConstraintComputation cc) {
+                                                   ConstraintComputation cc) {
         sd.setBindValue(newValue);
         double newGoal = cc.compute();
         if (cc.isBetter(newGoal, goal)) {
@@ -280,56 +275,65 @@ public class Step1 extends BaseStep {
                     }
                 }
             }
-            logger.debug(unfeasibleInstances + " unfeasible candidates generated for instance " + (i+1));
+            logger.debug(unfeasibleInstances + " unfeasible candidates generated for instance " + (i + 1));
         }
     }
 
     public List<double[]> execute() {
         logger.debug("executing step 1");
-        gotoChebyshevCenter();
         List<String> options = new ArrayList<String>();
-        options.add("Start from Chebyshev center: " + Arrays.toString(chebyshevCenter));
         options.add("Minimize constraint violation");
         options.add("Enter point manually");
+
+        boolean chebyshevCenterComputed = true;
+        try {
+            gotoChebyshevCenter();
+            options.add("Start from Chebyshev center: " + Arrays.toString(chebyshevCenter));
+        } catch (Exception e) {
+            logger.warn("only problems with linear constraints can start from chebyshev center", e);
+            chebyshevCenterComputed = false;
+        }
+
         Integer choice = input.getChoice(options, 1, "Select method for initial point initialization");
         switch (choice) {
-        case 1:
-            //We are already at chebyshev center
-            break;
-        case 2:
-            generateRandomInitialX();
-            Util.dumpVars(logger, vars, "generated initial random X");
-            Double S = minimizeS();
-            logger.debug("S minimized to " + S);
-            if (S > 0) {
-                logger.error("S > 0 - can not find feasible initial point");
-            }
-            if (logger.isDebugEnabled()) {
-                logger.debug("Constraints' right and left parts after minimization of constraints violations");
-                for (ConstraintDeclaration cd : model.getConstraints()) {
-                    logger.debug(cd.getName() + ": " + interpreter.evaluateExpression(cd.getaExpr()) + " "
-                            + cd.getRelop() + " " + interpreter.evaluateExpression(cd.getbExpr()));
+            case 1:
+                generateRandomInitialX();
+                Util.dumpVars(logger, vars, "generated initial random X");
+                Double S = minimizeS();
+                logger.debug("S minimized to " + S);
+                if (S > 0) {
+                    logger.error("S > 0 - can not find feasible initial point");
                 }
-            }
-            break;
-        case 3:
-            StringBuilder sb = new StringBuilder();
-            for (SymbolDeclaration sd : vars) {
-                sb.append(sd.getName()).append(" ");
-            }
-            if (sb.length() > 2) {
-                sb.delete(sb.length() - 1, sb.length());
-            }
-            String vectorString = input.getString(null, "Enter values delimited with single space for variables " + sb.toString());
-            String[] elementsString = vectorString.split("\\s+");
-            for (int i=0; i<elementsString.length; i++) {
-                vars.get(i).setBindValue(Double.valueOf(elementsString[i]));
-            }
-            Util.dumpVars(logger, vars, "Initial variables");
-            break;
-        default:
-            throw new FiemException("Unknown option " + choice);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Constraints' right and left parts after minimization of constraints violations");
+                    for (ConstraintDeclaration cd : model.getConstraints()) {
+                        logger.debug(cd.getName() + ": " + interpreter.evaluateExpression(cd.getaExpr()) + " "
+                                + cd.getRelop() + " " + interpreter.evaluateExpression(cd.getbExpr()));
+                    }
+                }
+                break;
+            case 2:
+                StringBuilder sb = new StringBuilder();
+                for (SymbolDeclaration sd : vars) {
+                    sb.append(sd.getName()).append(" ");
+                }
+                if (sb.length() > 2) {
+                    sb.delete(sb.length() - 1, sb.length());
+                }
+                String vectorString = input.getString(null, "Enter values delimited with single space for variables " + sb.toString());
+                String[] elementsString = vectorString.split("\\s+");
+                for (int i = 0; i < elementsString.length; i++) {
+                    vars.get(i).setBindValue(Double.valueOf(elementsString[i]));
+                }
+                Util.dumpVars(logger, vars, "Initial variables");
+                break;
+            case 3:
+                //We are already at chebyshev center
+                break;
+            default:
+                throw new FiemException("Unknown option " + choice);
         }
+        Util.checkConstraints((double[]) null, model, interpreter, logger);
         generateInitialPopulation();
         Util.dumpPopulation(logger, initialPopulation, "initial population");
         return initialPopulation;

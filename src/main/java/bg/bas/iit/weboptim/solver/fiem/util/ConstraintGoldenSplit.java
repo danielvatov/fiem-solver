@@ -2,16 +2,19 @@ package bg.bas.iit.weboptim.solver.fiem.util;
 
 import net.vatov.ampl.model.OptimModel;
 import net.vatov.ampl.solver.OptimModelInterpreter;
+import org.apache.log4j.Logger;
 
 public class ConstraintGoldenSplit {
 
     private OptimModelInterpreter interpreter;
     private OptimModel model;
+    private Logger logger;
     private static final double PHI = (Math.sqrt(5) - 1) / 2;
 
-    public ConstraintGoldenSplit(OptimModel model, OptimModelInterpreter interpreter) {
+    public ConstraintGoldenSplit(OptimModel model, OptimModelInterpreter interpreter, Logger logger) {
         this.model = model;
         this.interpreter = interpreter;
+        this.logger = logger;
     }
 
     public double[] spit(Line line) {
@@ -25,7 +28,7 @@ public class ConstraintGoldenSplit {
                 right = middle;
             }
         } while (Util.euclidDistance(left, right) > Math.sqrt(line.dim()));
-        return Util.round(left, model, interpreter);
+        return Util.round(logger, left, model, interpreter);
     }
 
     public double[] spit(Line line, int constraintIdx) {
@@ -40,7 +43,7 @@ public class ConstraintGoldenSplit {
                 right = middle;
             }
         } while (Util.euclidDistance(left, right) > Math.sqrt(line.dim()));
-        return Util.round(left, model, interpreter);
+        return Util.round(logger, left, model, interpreter);
     }
 
     private double[] goldenSplit(double[] left, double[] right) {

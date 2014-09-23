@@ -27,7 +27,7 @@ public class Step5 extends BaseStep {
             return bestPoint;
         }
         Util.dumpObjectivesValuesForPoint(logger, bestPoint, "reference point is NOT feasible");
-        ConstraintGoldenSplit goldenSplit = new ConstraintGoldenSplit(model, interpreter);
+        ConstraintGoldenSplit goldenSplit = new ConstraintGoldenSplit(model, interpreter, logger);
         Line translation = new Line(chebyshevCenter, bestPoint.getPoint());
         Util.dumpPoint(logger, translation.getVector(), "computed translation vector for reference point");
         point = goldenSplit.spit(translation);

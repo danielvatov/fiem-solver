@@ -34,7 +34,7 @@ public class Step6 extends BaseStep {
         double[] translationVector = new Line(center, point).getVector();
         Util.dumpPoint(logger, translationVector, "computed translation vector");
         for (double[] p : population) {
-            ret.add(Util.round(Util.translate(p, 1, translationVector), model, interpreter));
+            ret.add(Util.round(logger, Util.translate(p, 1, translationVector), model, interpreter));
         }
         Util.dumpPopulation(logger, population, "translated population");
         return ret;

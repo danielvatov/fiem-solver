@@ -1,21 +1,18 @@
 package bg.bas.iit.weboptim.solver.fiem.util;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import net.vatov.ampl.model.ConstraintDeclaration;
-import net.vatov.ampl.model.Expression;
-import net.vatov.ampl.model.ObjectiveDeclaration;
-import net.vatov.ampl.model.OptimModel;
-import net.vatov.ampl.model.SymbolDeclaration;
+import bg.bas.iit.weboptim.solver.fiem.FiemException;
+import net.vatov.ampl.model.*;
 import net.vatov.ampl.solver.OptimModelInterpreter;
-
+import org.apache.commons.math3.ml.distance.ChebyshevDistance;
+import org.apache.commons.math3.optim.OptimizationData;
+import org.apache.commons.math3.optim.PointValuePair;
+import org.apache.commons.math3.optim.linear.*;
+import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
 import org.apache.commons.math3.util.Precision;
 import org.apache.log4j.Logger;
 
-import bg.bas.iit.weboptim.solver.fiem.FiemException;
+import java.math.BigDecimal;
+import java.util.*;
 
 
 public class Util {
@@ -28,7 +25,9 @@ public class Util {
     }
 
     public static boolean constraintsSatisfied(OptimModel model, OptimModelInterpreter interpreter, double[] point) {
-        bindVars(model, point);
+        if (null != point) {
+            bindVars(model, point);
+        }
         int constraintsNum = model.getConstraints().size();
         for (int i = 0; i < constraintsNum; ++i) {
             if (!interpreter.evaluateConstraint(i)) {
@@ -69,7 +68,7 @@ public class Util {
     }
 
     public static List<Tuple<ObjectiveDeclaration, Double>> bindAndEvaluateGoals(double[] b, OptimModel model,
-            OptimModelInterpreter interpreter) {
+                                                                                 OptimModelInterpreter interpreter) {
         bindVars(model, b);
         List<Tuple<ObjectiveDeclaration, Double>> ret = new ArrayList<Tuple<ObjectiveDeclaration, Double>>();
         for (int i = 0; i < model.getObjectives().size(); ++i) {
@@ -88,17 +87,49 @@ public class Util {
     }
 
     public static double[] getGoalVector(ObjectivesValuesForPoint point) {
-        List<Tuple<ObjectiveDeclaration,Double>> goals = point.getGoals();
+        List<Tuple<ObjectiveDeclaration, Double>> goals = point.getGoals();
         double[] ret = new double[point.getGoals().size()];
-        for (int i=0; i<goals.size(); i++) {
+        for (int i = 0; i < goals.size(); i++) {
             ret[i] = goals.get(i).getB();
         }
         return ret;
     }
-    
-    public static double[] round(final double[] point, OptimModel model, OptimModelInterpreter interpreter) {
+
+    public static void dumpUnsatisfiedConstraints(Logger logger, final double[] point, OptimModel model, OptimModelInterpreter interpreter) {
+        List<ConstraintDeclaration> unsatisfiedConstraints = Util.getUnsatisfiedConstraints(model, interpreter, point);
+        if (unsatisfiedConstraints.isEmpty()) {
+            return;
+        }
+        logger.error("Unsatisifed constraints at point:");
+        if (null != point) {
+            dumpPoint(logger, point, null);
+        } else {
+            dumpVars(logger, model.getVarRefs(), null);
+        }
+        for (ConstraintDeclaration cd : unsatisfiedConstraints) {
+            logger.error(cd.getName() + ": " + interpreter.evaluateExpression(cd.getaExpr()) + " "
+                    + cd.getRelop() + " " + interpreter.evaluateExpression(cd.getbExpr()));
+        }
+    }
+
+
+    public static void checkConstraints(List<double[]> pop, OptimModel model, OptimModelInterpreter interpreter, Logger logger) {
+        for (double[] p : pop) {
+            checkConstraints(p, model, interpreter, logger);
+        }
+    }
+
+    public static void checkConstraints(double[] p, OptimModel model, OptimModelInterpreter interpreter, Logger logger) {
+        if (!Util.constraintsSatisfied(model, interpreter, p)) {
+            Util.dumpUnsatisfiedConstraints(logger, p, model, interpreter);
+            throw new FiemException("Infeasible point found!");
+        }
+    }
+
+    public static double[] round(Logger logger, final double[] point, OptimModel model, OptimModelInterpreter interpreter) {
         double[] ret = Arrays.copyOf(point, point.length);
         if (!constraintsSatisfied(model, interpreter, point)) {
+            dumpUnsatisfiedConstraints(logger, point, model, interpreter);
             throw new FiemException("Rounding unfeasible value");
         }
         for (int i = 0; i < point.length; ++i) {
@@ -114,8 +145,10 @@ public class Util {
     }
 
     public static List<ConstraintDeclaration> getUnsatisfiedConstraints(OptimModel model,
-            OptimModelInterpreter interpreter, double[] point) {
-        bindVars(model, point);
+                                                                        OptimModelInterpreter interpreter, double[] point) {
+        if (null != point) {
+            bindVars(model, point);
+        }
         List<ConstraintDeclaration> ret = new ArrayList<ConstraintDeclaration>();
         int constraintsNum = model.getConstraints().size();
         for (int i = 0; i < constraintsNum; ++i) {
@@ -138,7 +171,7 @@ public class Util {
         }
         return ret;
     }
-    
+
     public static void dumpPopulation(Logger logger, List<double[]> p, String header) {
         if (null != header) {
             logger.debug(header);
@@ -195,5 +228,69 @@ public class Util {
         for (SymbolDeclaration sd : vars) {
             logger.debug(sd);
         }
+    }
+
+    public static double[] getContraintCoefficients(OptimModel model, OptimModelInterpreter interpreter, ConstraintDeclaration cd) {
+        double[] ret = new double[model.getVarRefs().size() + 1];
+        Expression aExpr = cd.getaExpr();
+        for (SymbolDeclaration sd : model.getVarRefs()) {
+            sd.setBindValue(0d);
+        }
+        Double constFactor = interpreter.evaluateExpression(aExpr);
+        int sign = 0;
+        switch (cd.getRelop()) {
+            case GE:
+                sign = -1;
+                break;
+            case EQ:
+                throw new FiemException("Invalid constraint relation 'EQ' for " + cd.getName());
+            case LE:
+                sign = 1;
+                break;
+        }
+
+        Double b = sign * (interpreter.evaluateExpression(cd.getbExpr()) - constFactor);
+        int i = 0;
+        for (SymbolDeclaration sd : model.getVarRefs()) {
+            sd.setBindValue(1d);
+            ret[i++] = sign * (interpreter.evaluateExpression(aExpr) - constFactor);
+            sd.setBindValue(0d);
+        }
+        ret[i] = b;
+        return ret;
+    }
+
+    public static Map<String, double[]> getConstraintsCoefficients(OptimModel model, OptimModelInterpreter interpreter) {
+        Map<String, double[]> ret = new HashMap<String, double[]>(model.getConstraints().size());
+        for (ConstraintDeclaration cd : model.getConstraints()) {
+            ret.put(cd.getName(), getContraintCoefficients(model, interpreter, cd));
+        }
+        return ret;
+    }
+
+    public static double[] computeChebyshevCenter(Map<String, double[]> constraintCoefficients) {
+        double[] goalCoeff = new double[constraintCoefficients.size()];
+        Arrays.fill(goalCoeff, 0d);
+        goalCoeff[constraintCoefficients.size() - 1] = 1;
+        LinearObjectiveFunction goal = new LinearObjectiveFunction(goalCoeff, 0);
+        List<LinearConstraint> constraints = new ArrayList<LinearConstraint>();
+        for (double[] c : constraintCoefficients.values()) {
+            double value = c[c.length - 1];
+            c[c.length - 1] = computeUniformNorm(Arrays.copyOf(c, c.length - 1));
+            constraints.add(new LinearConstraint(c, Relationship.LEQ, value));
+        }
+
+        double[] rConstraint = new double[constraintCoefficients.size()];
+        Arrays.fill(rConstraint, 0d);
+        rConstraint[rConstraint.length - 1] = 1;
+        constraints.add(new LinearConstraint(rConstraint, Relationship.GEQ, 0));
+
+        PointValuePair pair = new SimplexSolver().optimize(goal, GoalType.MAXIMIZE, new LinearConstraintSet(constraints));
+        return pair.getPoint();
+    }
+
+    public static double computeUniformNorm(double[] points) {
+        ChebyshevDistance d = new ChebyshevDistance();
+        return d.compute(new double[points.length], points);
     }
 }

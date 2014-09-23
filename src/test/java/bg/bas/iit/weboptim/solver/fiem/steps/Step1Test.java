@@ -96,32 +96,12 @@ public class Step1Test {
     }
 
     @Test
-    public void testGotoChebyshevCenter() throws Exception {
-        logger.debug("Test chebyshev center computation");
-        Step1 step1 = new Step1(model, interpreter, cfg, null);
-        model.getVarRef("x1").setBindValue(935.0);
-        model.getVarRef("x2").setBindValue(35.0);
-        logger.debug("Starting point [" + model.getVarRef("x1").getBindValue() + ", "+ model.getVarRef("x2").getBindValue() + "]");
-        Whitebox.<Double> invokeMethod(step1, "gotoChebyshevCenter", new Object[] {});
-        List<SymbolDeclaration> vars = Whitebox.getInternalState(step1, "vars");
-        for (SymbolDeclaration sd : vars) {
-            if ("x1".equals(sd.getName())) {
-                assertEquals(500.0, sd.getBindValue().doubleValue(), 0.0);
-            }
-            if ("x2".equals(sd.getName())) {
-                assertEquals(50.0, sd.getBindValue().doubleValue(), 0.0);
-            }
-        }
-        logger.debug("Chebyshev center at [" + + model.getVarRef("x1").getBindValue() + ", "+ model.getVarRef("x2").getBindValue() + "]");
-    }
-
-    @Test
     public void testGenerateInitialPopulation() throws Exception {
         logger.debug("Test generation of random initial population");
         Step1 step1 = new Step1(model, interpreter, cfg, null);
         model.getVarRef("x1").setBindValue(935.0);
         model.getVarRef("x2").setBindValue(35.0);
-        Whitebox.<Double> invokeMethod(step1, "gotoChebyshevCenter", new Object[] {});
+        //Whitebox.<Double> invokeMethod(step1, "gotoChebyshevCenter", new Object[] {});
         Whitebox.<Void> invokeMethod(step1, "generateInitialPopulation", new Object[] {});
         List<double[]> initialPopulation = Whitebox.<List<double[]>> getInternalState(step1, "initialPopulation");
         assertEquals(12, initialPopulation.size());
