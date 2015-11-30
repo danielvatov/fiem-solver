@@ -16,14 +16,10 @@ import bg.bas.iit.weboptim.solver.fiem.util.Util;
 public class Step6 extends BaseStep {
 
     private Logger logger;
-    private OptimModel model;
-    private OptimModelInterpreter interpreter;
 
-    public Step6(OptimModel model, OptimModelInterpreter interpreter, Config cfg) {
+    public Step6(Config cfg) {
         super(null, null);
         logger = getLogger(Step6.class, cfg.threadedLogging);
-        this.model = model;
-        this.interpreter = interpreter;
     }
 
     public List<double[]> execute(double[] point, List<double[]> population) {
@@ -34,7 +30,7 @@ public class Step6 extends BaseStep {
         double[] translationVector = new Line(center, point).getVector();
         Util.dumpPoint(logger, translationVector, "computed translation vector");
         for (double[] p : population) {
-            ret.add(Util.round(logger, Util.translate(p, 1, translationVector), model, interpreter));
+            ret.add(Util.round(Util.translate(p, 1, translationVector)));
         }
         Util.dumpPopulation(logger, population, "translated population");
         return ret;

@@ -38,7 +38,7 @@ public class Step6Test {
         logger.debug("Test step6 execution");
         Config cfg = new FiemSolver.Config();
         cfg.threadedLogging = false;
-        Step6 step6 = new Step6(model, new OptimModelInterpreter(model), cfg);
+        Step6 step6 = new Step6(cfg);
         double[] p = new double[] {1000, 100};
         Util.dumpPoint(logger, p, "reference point");
         Util.dumpPopulation(logger, population, "population");

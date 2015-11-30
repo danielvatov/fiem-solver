@@ -101,8 +101,8 @@ public class FiemSolver extends Solver {
         initModelConfig(interpreter, model);
 
         Step1 step1 = new Step1(model, interpreter, cfg, userInput);
-        double[] chebyshevCenter = step1.getChebyshevCenter();
         List<double[]> initialPopulation = step1.execute();
+        double[] chebyshevCenter = step1.getChebyshevCenter();
 
         Step2 step2 = new Step2(model, interpreter, cfg);
         List<double[]> population = step2.execute(initialPopulation);
@@ -118,7 +118,7 @@ public class FiemSolver extends Solver {
             Step5 step5 = new Step5(model, interpreter, cfg);
             point = step5.execute(point, chebyshevCenter);
 
-            Step6 step6 = new Step6(model, interpreter, cfg);
+            Step6 step6 = new Step6(cfg);
             population = step6.execute(point.getPoint(), population);
 
             Step7 step7 = new Step7(model, interpreter, cfg);

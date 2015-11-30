@@ -54,7 +54,7 @@ public class Step5Test {
         Util.dumpObjectivesValuesForPoint(logger, point, "Step5 execution result");
         assertEquals(0.0014, point.getGoals().get(0).getB(), 0.0001);
         assertEquals(0.0140, point.getGoals().get(1).getB(), 0.0001);
-        assertEquals(706, point.getPoint()[0],0);
+        assertEquals(707, point.getPoint()[0],0);
         assertEquals(70, point.getPoint()[1],0);
     }
 

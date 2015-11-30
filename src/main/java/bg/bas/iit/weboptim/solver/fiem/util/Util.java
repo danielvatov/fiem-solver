@@ -1,21 +1,34 @@
 package bg.bas.iit.weboptim.solver.fiem.util;
 
 import bg.bas.iit.weboptim.solver.fiem.FiemException;
-import net.vatov.ampl.model.*;
+import net.vatov.ampl.model.ConstraintDeclaration;
+import net.vatov.ampl.model.Expression;
+import net.vatov.ampl.model.ObjectiveDeclaration;
+import net.vatov.ampl.model.OptimModel;
+import net.vatov.ampl.model.SymbolDeclaration;
 import net.vatov.ampl.solver.OptimModelInterpreter;
 import org.apache.commons.math3.ml.distance.ChebyshevDistance;
-import org.apache.commons.math3.optim.OptimizationData;
 import org.apache.commons.math3.optim.PointValuePair;
-import org.apache.commons.math3.optim.linear.*;
+import org.apache.commons.math3.optim.linear.LinearConstraint;
+import org.apache.commons.math3.optim.linear.LinearConstraintSet;
+import org.apache.commons.math3.optim.linear.LinearObjectiveFunction;
+import org.apache.commons.math3.optim.linear.Relationship;
+import org.apache.commons.math3.optim.linear.SimplexSolver;
 import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
 import org.apache.commons.math3.util.Precision;
 import org.apache.log4j.Logger;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 
 public class Util {
+
+    private static Double EPS;
 
     public static void bindVars(OptimModel model, double[] point) {
         List<SymbolDeclaration> varRefs = model.getVarRefs();
@@ -126,7 +139,7 @@ public class Util {
         }
     }
 
-    public static double[] round(Logger logger, final double[] point, OptimModel model, OptimModelInterpreter interpreter) {
+    public static double[] roundAndCheck(Logger logger, final double[] point, OptimModel model, OptimModelInterpreter interpreter) {
         double[] ret = Arrays.copyOf(point, point.length);
         if (!constraintsSatisfied(model, interpreter, point)) {
             dumpUnsatisfiedConstraints(logger, point, model, interpreter);
@@ -140,6 +153,14 @@ public class Util {
                     throw new FiemException("Rounding unfeasible value");
                 }
             }
+        }
+        return ret;
+    }
+
+    public static double[] round(final double[] point) {
+        double[] ret = Arrays.copyOf(point, point.length);
+        for (int i = 0; i < point.length; ++i) {
+            ret[i] = Precision.round(point[i], 0, BigDecimal.ROUND_DOWN);
         }
         return ret;
     }
@@ -230,6 +251,15 @@ public class Util {
         }
     }
 
+    public static double[] getPointFromVars(List<SymbolDeclaration> vars) {
+        double[] ret = new double[vars.size()];
+        int i = 0;
+        for (SymbolDeclaration sd : vars) {
+            ret[i++] = sd.getBindValue();
+        }
+        return ret;
+    }
+
     public static double[] getContraintCoefficients(OptimModel model, OptimModelInterpreter interpreter, ConstraintDeclaration cd) {
         double[] ret = new double[model.getVarRefs().size() + 1];
         Expression aExpr = cd.getaExpr();
@@ -292,5 +322,17 @@ public class Util {
     public static double computeUniformNorm(double[] points) {
         ChebyshevDistance d = new ChebyshevDistance();
         return d.compute(new double[points.length], points);
+    }
+
+    public static Double epsilon() {
+        if (EPS != null) {
+            return EPS;
+        }
+        EPS = 1.0;
+        while ((1.0 + 0.5 * EPS) != 1.0) {
+            EPS = 0.5 * EPS;
+        }
+        EPS = Math.sqrt(EPS);
+        return EPS;
     }
 }

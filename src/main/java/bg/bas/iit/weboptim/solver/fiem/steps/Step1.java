@@ -7,7 +7,6 @@ import net.vatov.ampl.model.ConstraintDeclaration.RelopType;
 import net.vatov.ampl.model.Expression;
 import net.vatov.ampl.model.OptimModel;
 import net.vatov.ampl.model.SymbolDeclaration;
-import net.vatov.ampl.model.SymbolDeclaration.SymbolType;
 import net.vatov.ampl.solver.OptimModelInterpreter;
 import net.vatov.ampl.solver.io.UserIO;
 
@@ -149,12 +148,15 @@ public class Step1 extends BaseStep {
         double[] p = Util.computeChebyshevCenter(constraintsCoefficients);
 
         int i = 0;
+        double[] rounded = Util.roundAndCheck(logger, p, model, interpreter);
         for (SymbolDeclaration sd : vars) {
             if (sd.isInteger()) {
-                sd.setBindValue(Double.valueOf(Math.round(p[i++])));
+                sd.setBindValue(rounded[i]);
             } else {
-                sd.setBindValue(p[i++]);
+                sd.setBindValue(p[i]);
             }
+            chebyshevCenter[i] = sd.getBindValue();
+            i++;
         }
     }
 
@@ -290,7 +292,7 @@ public class Step1 extends BaseStep {
             gotoChebyshevCenter();
             options.add("Start from Chebyshev center: " + Arrays.toString(chebyshevCenter));
         } catch (Exception e) {
-            logger.warn("only problems with linear constraints can start from chebyshev center", e);
+            logger.warn(String.format("Can not compute Chebyshev center: %s", e.getMessage()));
             chebyshevCenterComputed = false;
         }
 
@@ -334,6 +336,10 @@ public class Step1 extends BaseStep {
                 throw new FiemException("Unknown option " + choice);
         }
         Util.checkConstraints((double[]) null, model, interpreter, logger);
+        if (chebyshevCenterComputed == false) {
+            chebyshevCenter = Util.getPointFromVars(model.getVarRefs());
+            Util.dumpPoint(logger, chebyshevCenter, "Chebyshev center forced to point");
+        }
         generateInitialPopulation();
         Util.dumpPopulation(logger, initialPopulation, "initial population");
         return initialPopulation;
