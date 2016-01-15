@@ -1,26 +1,23 @@
 package bg.bas.iit.weboptim.solver.fiem.steps;
 
-import static org.junit.Assert.assertEquals;
-
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-
+import bg.bas.iit.weboptim.solver.fiem.FiemSolver;
+import bg.bas.iit.weboptim.solver.fiem.FiemSolver.Config;
+import bg.bas.iit.weboptim.solver.fiem.util.Util;
 import net.vatov.ampl.AmplParser;
 import net.vatov.ampl.model.ConstraintDeclaration;
 import net.vatov.ampl.model.OptimModel;
 import net.vatov.ampl.solver.OptimModelInterpreter;
-
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.powermock.reflect.Whitebox;
 
-import bg.bas.iit.weboptim.solver.fiem.FiemSolver;
-import bg.bas.iit.weboptim.solver.fiem.FiemSolver.Config;
-import bg.bas.iit.weboptim.solver.fiem.steps.Step2;
-import bg.bas.iit.weboptim.solver.fiem.util.Util;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 public class Step2Test {
 
@@ -49,7 +46,13 @@ public class Step2Test {
     }
 
     @Test
-    public final void testFindUndominated() throws Exception {
+    public final void testExecute() throws Exception {
+        testFindUndominated();
+        testComputeWeightCenters();
+        testComputeMoveVector();
+    }
+
+    private final void testFindUndominated() throws Exception {
         logger.debug("Find undominated members of the population");
         Whitebox.invokeMethod(step2, "findUndominated", new Object[] { ptot });
         List<double[]> p = Whitebox.getInternalState(step2, "p");
@@ -65,8 +68,7 @@ public class Step2Test {
 
     }
 
-    @Test
-    public final void testComputeWeightCenters() throws Exception {
+    private final void testComputeWeightCenters() throws Exception {
         logger.debug("Test compute weight centers");
         Whitebox.invokeMethod(step2, "computeWeightCenters", new Object[] {});
         double[] ci = Whitebox.getInternalState(step2, "ci");
@@ -79,8 +81,7 @@ public class Step2Test {
         assertEquals(2.0, ce[1], 0.1);
     }
 
-    @Test
-    public final void testComputeMoveVector() throws Exception {
+    private final void testComputeMoveVector() throws Exception {
         logger.debug("Test computation of translation vector");
         Whitebox.invokeMethod(step2, "computeMoveVector", new Object[] {});
         double[] t = Whitebox.getInternalState(step2, "t");
