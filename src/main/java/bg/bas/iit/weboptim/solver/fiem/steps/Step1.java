@@ -10,6 +10,8 @@ import net.vatov.ampl.model.SymbolDeclaration;
 import net.vatov.ampl.solver.OptimModelInterpreter;
 import net.vatov.ampl.solver.io.UserIO;
 
+import org.apache.commons.math3.optim.linear.LinearConstraint;
+import org.apache.commons.math3.optim.linear.LinearObjectiveFunction;
 import org.apache.log4j.Logger;
 
 import bg.bas.iit.weboptim.solver.fiem.BaseStep;
@@ -145,7 +147,13 @@ public class Step1 extends BaseStep {
 
     private void gotoChebyshevCenter() {
         Map<String, double[]> constraintsCoefficients = Util.getConstraintsCoefficients(model, interpreter);
-        double[] p = Util.computeChebyshevCenter(constraintsCoefficients);
+        logger.debug("Chebyshev center constraint coefficients");
+        Util.dumpPoints(logger, constraintsCoefficients);
+        LinearObjectiveFunction goal = Util.getLinearObjectiveFunction(constraintsCoefficients);
+        List<LinearConstraint> constraints = Util.getLinearConstraints(constraintsCoefficients);
+        logger.debug("Chebyshev center model (Convex Optimization, Boyd and Vandenberghe):");
+        Util.dumpMath3Model(logger, goal, constraints);
+        double[] p = Util.computeChebyshevCenter(goal, constraints);
 
         int i = 0;
         double[] rounded = Util.roundAndCheck(logger, p, model, interpreter);

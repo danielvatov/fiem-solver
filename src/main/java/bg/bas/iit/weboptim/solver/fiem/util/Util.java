@@ -202,6 +202,12 @@ public class Util {
         }
     }
 
+    public static void dumpPoints(Logger logger, Map<String, double[]> points) {
+        for (String header : points.keySet()) {
+            dumpPoint(logger, points.get(header), header);
+        }
+    }
+
     public static void dumpPoint(Logger logger, double[] p, String header) {
         StringBuilder sb = new StringBuilder();
         if (null != header) {
@@ -298,11 +304,13 @@ public class Util {
         return ret;
     }
 
-    public static double[] computeChebyshevCenter(Map<String, double[]> constraintCoefficients) {
-        double[] goalCoeff = new double[constraintCoefficients.size()];
-        Arrays.fill(goalCoeff, 0d);
-        goalCoeff[constraintCoefficients.size() - 1] = 1;
-        LinearObjectiveFunction goal = new LinearObjectiveFunction(goalCoeff, 0);
+    public static double[] computeChebyshevCenter(LinearObjectiveFunction goal, List<LinearConstraint> constraints) {
+        PointValuePair pair = new SimplexSolver().optimize(goal, GoalType.MAXIMIZE, new LinearConstraintSet(constraints));
+        return pair.getPoint();
+    }
+
+    public static List<LinearConstraint> getLinearConstraints(
+            Map<String, double[]> constraintCoefficients) {
         List<LinearConstraint> constraints = new ArrayList<LinearConstraint>();
         for (double[] c : constraintCoefficients.values()) {
             double value = c[c.length - 1];
@@ -314,9 +322,16 @@ public class Util {
         Arrays.fill(rConstraint, 0d);
         rConstraint[rConstraint.length - 1] = 1;
         constraints.add(new LinearConstraint(rConstraint, Relationship.GEQ, 0));
+        return constraints;
+    }
 
-        PointValuePair pair = new SimplexSolver().optimize(goal, GoalType.MAXIMIZE, new LinearConstraintSet(constraints));
-        return pair.getPoint();
+    public static LinearObjectiveFunction getLinearObjectiveFunction(
+            Map<String, double[]> constraintCoefficients) {
+        int varsNum = constraintCoefficients.values().iterator().next().length;
+        double[] goalCoeff = new double[varsNum];
+        Arrays.fill(goalCoeff, 0d);
+        goalCoeff[varsNum - 1] = 1;
+        return new LinearObjectiveFunction(goalCoeff, 0);
     }
 
     public static double computeUniformNorm(double[] points) {
@@ -334,5 +349,13 @@ public class Util {
         }
         EPS = Math.sqrt(EPS);
         return EPS;
+    }
+
+    public static void dumpMath3Model(Logger logger, LinearObjectiveFunction goal,
+            List<LinearConstraint> constraints) {
+        logger.debug(String.format("Goal: %s  const %f", goal.getCoefficients(), goal.getConstantTerm()));
+        for (LinearConstraint c : constraints) {
+            logger.debug(String.format("Constraint: %s %s %f", c.getCoefficients(), c.getRelationship(), c.getValue()));
+        }
     }
 }

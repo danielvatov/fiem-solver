@@ -1,26 +1,27 @@
 package bg.bas.iit.weboptim.solver.fiem.steps;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import bg.bas.iit.weboptim.solver.fiem.FiemSolver;
+import bg.bas.iit.weboptim.solver.fiem.util.Util;
 import net.vatov.ampl.AmplParser;
 import net.vatov.ampl.model.ConstraintDeclaration;
 import net.vatov.ampl.model.OptimModel;
 import net.vatov.ampl.model.xml.AmplXmlPersister;
 import net.vatov.ampl.solver.OptimModelInterpreter;
+import org.apache.commons.math3.optim.linear.LinearConstraint;
+import org.apache.commons.math3.optim.linear.LinearObjectiveFunction;
 import org.apache.log4j.Logger;
-import org.junit.Assert;
 import org.junit.Test;
 
-import bg.bas.iit.weboptim.solver.fiem.util.Util;
-import org.powermock.reflect.Whitebox;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 public class CommonTest {
 
@@ -67,35 +68,95 @@ public class CommonTest {
             AmplXmlPersister persister = new AmplXmlPersister();
             persister.write(model, System.out);
             interpreter = new OptimModelInterpreter(model);
-            FiemSolver fiemSolver = new FiemSolver();
         } finally {
             is.close();
         }
         ConstraintDeclaration cd = model.getConstraint("c1");
         double[] contraintCoefficients = Util.getContraintCoefficients(model, interpreter, cd);
-        assertArrayEquals(new double[] {1.0, 10.0, -12.0, 0.0, 1000000.0}, contraintCoefficients, 0.1);
+        assertArrayEquals(new double[] { 1.0, 10.0, -12.0, 0.0, 1000000.0 }, contraintCoefficients,
+                0.1);
 
         cd = model.getConstraint("c2");
         contraintCoefficients = Util.getContraintCoefficients(model, interpreter, cd);
-        assertArrayEquals(new double[] {-6.0, -4.0, 64.0, 0.0, -14.0}, contraintCoefficients, 0.1);
+        assertArrayEquals(new double[] { -6.0, -4.0, 64.0, 0.0, -14.0 }, contraintCoefficients,
+                0.1);
     }
-
 
     /**
      * x1 + x2 < 10; x1>2; x2>3
      */
     @Test
-    public final void testComputeChebyshevCenter(){
-        Map<String, double[]> p = new HashMap<String, double[]>();
-        p.put("c", new double[] {1, 1, 10});
-        p.put("x1", new double[] {-1, 0, -2});
-        p.put("x2", new double[] {0, -1, -3});
-        double[] chebyshevCenter = Util.computeChebyshevCenter(p);
-        assertArrayEquals(new double[] {3.67, 4.67, 1.67}, chebyshevCenter, 0.01);
+    public final void testGetContraintCoefficients() throws IOException {
+        InputStream is = new ByteArrayInputStream(
+                "var x1 >= 2;\nvar x2 >= 3;\nminimize f1: 1/(x1 + x2);\nc1: x1 + x2 <= 10;\n"
+                        .getBytes(Charset.forName("UTF-8")));
+        OptimModel model;
+        OptimModelInterpreter interpreter;
+        try {
+            model = new AmplParser().parse(is);
+            AmplXmlPersister persister = new AmplXmlPersister();
+            persister.write(model, System.out);
+            interpreter = new OptimModelInterpreter(model);
+        } finally {
+            is.close();
+        }
+        ConstraintDeclaration cd = model.getConstraint("c1");
+        double[] contraintCoefficients = Util.getContraintCoefficients(model, interpreter, cd);
+        assertArrayEquals(new double[] { 1.0, 1.0, 10.0 }, contraintCoefficients,
+                0.1);
+
+        cd = model.getConstraint("var_x1_lower");
+        contraintCoefficients = Util.getContraintCoefficients(model, interpreter, cd);
+        assertArrayEquals(new double[] { -1, 0, -2 }, contraintCoefficients,
+                0.1);
+
+        cd = model.getConstraint("var_x2_lower");
+        contraintCoefficients = Util.getContraintCoefficients(model, interpreter, cd);
+        assertArrayEquals(new double[] { 0, -1, -3 }, contraintCoefficients,
+                0.1);
     }
 
     @Test
-    public final void testComputeUniformNorm(){
-        assertEquals(20, Util.computeUniformNorm(new double[]{-10, 3, 0, 0, 15, -20, 1}), 0.1);
+    public final void testComplexChebyshevCenter() throws IOException {
+        InputStream is = getClass().getResourceAsStream("lin_constraints.mod");
+        OptimModel model;
+        OptimModelInterpreter interpreter;
+        try {
+            model = new AmplParser().parse(is);
+            AmplXmlPersister persister = new AmplXmlPersister();
+            persister.write(model, System.out);
+            interpreter = new OptimModelInterpreter(model);
+        } finally {
+            is.close();
+        }
+        Map<String, double[]> constraintsCoefficients = Util
+                .getConstraintsCoefficients(model, interpreter);
+
+        LinearObjectiveFunction goal = Util.getLinearObjectiveFunction(constraintsCoefficients);
+        List<LinearConstraint> constraints = Util.getLinearConstraints(constraintsCoefficients);
+        Util.dumpMath3Model(logger, goal, constraints);
+        double[] chebyshevCenter = Util.computeChebyshevCenter(goal, constraints);
+        assertArrayEquals(new double[] {953.7, 53.7, 46.3, 46.3, 46.3}, chebyshevCenter, 0.1);
+    }
+
+    /**
+     * x1 + x2 < 10; x1>2; x2>3
+     */
+    @Test
+    public final void testComputeChebyshevCenter() {
+        Map<String, double[]> p = new HashMap<String, double[]>();
+        p.put("c", new double[] { 1, 1, 10 });
+        p.put("x1", new double[] { -1, 0, -2 });
+        p.put("x2", new double[] { 0, -1, -3 });
+        LinearObjectiveFunction goal = Util.getLinearObjectiveFunction(p);
+        List<LinearConstraint> constraints = Util.getLinearConstraints(p);
+        double[] chebyshevCenter = Util.computeChebyshevCenter(goal, constraints);
+        Util.dumpMath3Model(logger, goal, constraints);
+        assertArrayEquals(new double[] { 3.67, 4.67, 1.67 }, chebyshevCenter, 0.01);
+    }
+
+    @Test
+    public final void testComputeUniformNorm() {
+        assertEquals(20, Util.computeUniformNorm(new double[] { -10, 3, 0, 0, 15, -20, 1, 19 }), 0.1);
     }
 }
