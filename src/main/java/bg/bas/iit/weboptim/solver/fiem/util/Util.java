@@ -306,7 +306,7 @@ public class Util {
 
     public static double[] computeChebyshevCenter(LinearObjectiveFunction goal, List<LinearConstraint> constraints) {
         PointValuePair pair = new SimplexSolver().optimize(goal, GoalType.MAXIMIZE, new LinearConstraintSet(constraints));
-        return pair.getPoint();
+        return Arrays.copyOf(pair.getPoint(), pair.getPoint().length-1);
     }
 
     public static List<LinearConstraint> getLinearConstraints(

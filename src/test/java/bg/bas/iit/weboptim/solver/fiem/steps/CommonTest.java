@@ -136,7 +136,7 @@ public class CommonTest {
         List<LinearConstraint> constraints = Util.getLinearConstraints(constraintsCoefficients);
         Util.dumpMath3Model(logger, goal, constraints);
         double[] chebyshevCenter = Util.computeChebyshevCenter(goal, constraints);
-        assertArrayEquals(new double[] {953.7, 53.7, 46.3, 46.3, 46.3}, chebyshevCenter, 0.1);
+        assertArrayEquals(new double[] {953.7, 53.7, 46.3, 46.3}, chebyshevCenter, 0.1);
     }
 
     /**
@@ -152,7 +152,7 @@ public class CommonTest {
         List<LinearConstraint> constraints = Util.getLinearConstraints(p);
         double[] chebyshevCenter = Util.computeChebyshevCenter(goal, constraints);
         Util.dumpMath3Model(logger, goal, constraints);
-        assertArrayEquals(new double[] { 3.67, 4.67, 1.67 }, chebyshevCenter, 0.01);
+        assertArrayEquals(new double[] { 3.67, 4.67 }, chebyshevCenter, 0.01);
     }
 
     @Test
